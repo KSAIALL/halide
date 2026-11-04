@@ -1,0 +1,251 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><title>HALIDE — digital darkroom</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;1,500&family=IBM+Plex+Mono:wght@400&family=Inter:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{--bk:#10100F;--c1:#191918;--c2:#242321;--bd:#34322F;--pp:#F1EEE7;--cr:#E7E1D6;--gy:#969187;--am:#C69B65;--ol:#92947A;color-scheme:dark;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*,*::before,*::after{box-sizing:inherit;margin:0}
+html,body{height:100%}
+[hidden]{display:none!important}
+body{background:var(--bk);color:var(--pp);font:14px/1.4 Inter,system-ui,sans-serif;overflow-x:hidden}
+.mono{font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:11px;color:var(--gy);letter-spacing:.04em}
+.serif{font-family:"Cormorant Garamond",Georgia,serif}
+#app{height:100%;display:grid;grid-template-columns:minmax(0,1fr) 300px;grid-template-rows:52px minmax(0,1fr) auto}
+header{grid-column:1/-1;display:flex;align-items:center;gap:8px;padding:0 14px;border-bottom:1px solid var(--bd);background:var(--bk)}
+.logo{letter-spacing:.34em;font-weight:500;font-size:13px;margin-right:6px}
+#fname{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.btn{background:transparent;border:1px solid var(--bd);color:var(--pp);padding:6px 12px;border-radius:6px;min-height:36px;cursor:pointer;font:inherit}
+.btn:hover:not(:disabled){background:var(--c2)}.btn:disabled{opacity:.35;cursor:default}
+.btn:focus-visible,.pc:focus-visible,.tab:focus-visible,input:focus-visible{outline:2px solid var(--am);outline-offset:2px}
+.btn.pri{background:var(--am);color:#1a1612;border-color:var(--am);font-weight:500}
+.btn[aria-pressed=true]{border-color:var(--am);color:var(--am)}
+#stage{position:relative;display:flex;align-items:center;justify-content:center;background:var(--c1);min-height:0;overflow:hidden}
+#frame{position:relative;touch-action:none;box-shadow:0 8px 40px #000a}
+#frame canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+#og{clip-path:inset(0 50% 0 0)}
+#dv{position:absolute;top:0;bottom:0;width:2px;background:var(--pp);margin-left:-1px;cursor:ew-resize}
+#dv::after{content:"◂ ▸";position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:var(--pp);color:var(--bk);border-radius:20px;padding:5px 9px;font-size:10px;white-space:nowrap}
+#tools{position:absolute;left:10px;bottom:10px;display:flex;gap:6px}
+#tools .btn{background:#10100Fcc;font-size:12px}
+#msg{position:absolute;right:12px;bottom:12px;max-width:60%;text-align:right}
+#msg.err{color:#e0907a}
+#empty{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:14px;padding:24px;background:radial-gradient(circle at 50% 40%,var(--c2),var(--bk) 75%)}
+#empty h1{font-size:34px;font-weight:500;font-style:italic;max-width:14em;line-height:1.1}
+#stage.drag{outline:2px dashed var(--am);outline-offset:-10px}
+#strip-wrap{grid-column:1;border-top:1px solid var(--bd);background:var(--bk);padding:10px 0 22px;min-width:0}
+#tabs{display:flex;gap:2px;padding:0 14px 10px;overflow-x:auto;scrollbar-width:none}#tabs::-webkit-scrollbar{display:none}
+.tab{background:none;border:0;color:var(--gy);padding:6px 10px;cursor:pointer;font:inherit;white-space:nowrap;border-bottom:2px solid transparent}
+.tab[aria-selected=true]{color:var(--pp);border-color:var(--am)}
+#strip-row{display:flex;align-items:center;gap:8px;padding:0 12px}
+#strip{flex:1;min-width:0;display:flex;gap:10px;overflow-x:auto;padding:4px 2px 6px;scroll-snap-type:x proximity;scrollbar-width:none}
+#strip::-webkit-scrollbar{display:none}
+.arrow{flex:0 0 36px;height:36px;border-radius:50%;border:1px solid var(--bd);background:var(--c1);color:var(--pp);font-size:20px;line-height:1;cursor:pointer}
+.arrow:hover:not(:disabled){background:var(--c2);border-color:var(--am)}.arrow:disabled{opacity:.25;cursor:default}.arrow:focus-visible{outline:2px solid var(--am);outline-offset:2px}
+.pc{flex:0 0 112px;background:var(--c1);border:1px solid var(--bd);border-radius:4px;padding:6px 6px 8px;color:var(--pp);text-align:left;cursor:pointer;font:inherit;scroll-snap-align:start;position:relative}
+.pc canvas{width:100%;aspect-ratio:3/2;background:var(--c2);display:block;border-radius:2px}
+.pc[aria-pressed=true]{border-color:var(--am);background:var(--c2)}
+.pc[aria-pressed=true]::after{content:"● ACTIVE";position:absolute;top:10px;left:10px;font:9px "IBM Plex Mono",monospace;color:var(--am);background:#10100Fd0;padding:1px 4px;border-radius:2px}
+.pc .fn{display:flex;justify-content:space-between;margin-top:6px}
+#panel{grid-column:2;grid-row:2/4;border-left:1px solid var(--bd);padding:16px;overflow-y:auto;display:flex;flex-direction:column;gap:14px;background:var(--bk)}
+#panel h2{font-size:26px;font-weight:500;line-height:1}
+.paper{background:var(--pp);color:#24221F;border-radius:3px;padding:10px 12px}
+.paper .mono{color:#6b665d}
+.row{display:flex;justify-content:space-between;align-items:baseline}
+input[type=range]{width:100%;height:28px;accent-color:var(--am);background:none}
+.seg{display:flex;border:1px solid var(--bd);border-radius:6px;overflow:hidden}
+.seg button{flex:1;border:0;background:none;color:var(--gy);padding:8px 4px;cursor:pointer;font:inherit;min-height:36px}
+.seg button[aria-pressed=true]{background:var(--c2);color:var(--am)}
+label.chk{display:flex;align-items:center;gap:8px;min-height:32px;cursor:pointer}
+input[type=checkbox]{accent-color:var(--am);width:18px;height:18px}
+select{background:var(--c2);color:var(--pp);border:1px solid var(--bd);border-radius:6px;padding:8px;font:inherit}
+hr{border:0;border-top:1px solid var(--bd);width:100%}
+@media(max-width:820px){
+ #app{display:block;height:auto;min-height:100%}
+ #stage{height:56vh}
+ #panel{border-left:0;border-top:1px solid var(--bd)}
+ #msg{max-width:90%;bottom:52px}
+ .hide-m{display:none}
+}
+@media(prefers-reduced-motion:no-preference){.pc{transition:border-color .2s,background .2s}}
+</style></head><body>
+<div id="app">
+<header><span class="logo">HALIDE</span><span id="fname" class="mono">no photograph</span>
+<button class="btn" id="load">Load</button><button class="btn" id="undo" disabled aria-label="Undo">↶</button><button class="btn" id="redo" disabled aria-label="Redo">↷</button><button class="btn pri" id="exp" disabled>Export</button></header>
+<main id="stage"><div id="frame" hidden><canvas id="cv"></canvas><canvas id="og" hidden></canvas><div id="dv" hidden></div></div>
+<div id="tools" hidden><button class="btn" id="cmp" aria-pressed="false">Compare</button><button class="btn" id="hold">Hold original</button></div>
+<div id="empty"><span class="mono">LATENT IMAGE · NO EXPOSURE</span><h1 class="serif">Your photographs. Your film. Your darkroom.</h1><button class="btn pri" id="load2">Load a photograph</button><span class="mono">or drop a JPEG, PNG or WebP here · processed locally, never uploaded</span></div>
+<div id="msg" class="mono" role="status" aria-live="polite"></div></main>
+<div id="strip-wrap"><div id="tabs" role="tablist" aria-label="Preset categories"></div><div id="strip-row"><button class="arrow" id="sl" aria-label="Scroll presets left">‹</button><div id="strip"></div><button class="arrow" id="sr" aria-label="Scroll presets right">›</button></div></div>
+<aside id="panel">
+<div class="paper"><div class="mono" id="pcat">—</div><h2 class="serif" id="pname">—</h2><p class="serif" id="pdesc" style="font-style:italic;margin-top:6px;font-size:16px"></p></div>
+<div><div class="row"><label for="k">Intensity</label><span class="mono" id="kv">100%</span></div><input id="k" type="range" min="0" max="100" value="100"></div>
+<div><div class="row"><label for="ga">Grain amount</label><span class="mono" id="gav">0</span></div><input id="ga" type="range" min="0" max="100" value="0"></div>
+<div><div class="mono" style="margin-bottom:6px">GRAIN CHARACTER</div><div class="seg" id="gc"><button data-v="0.65">Fine</button><button data-v="1">Classic</button><button data-v="1.5">Coarse</button></div></div>
+<div><label class="chk"><input type="checkbox" id="du"> Dust</label><label class="chk"><input type="checkbox" id="ha"> Highlight halation</label></div>
+<p class="mono" id="note"></p><hr>
+<div class="row"><label for="fmt">Export format</label><select id="fmt"><option value="jpeg">JPEG</option><option value="png">PNG</option></select></div>
+<div id="qw"><div class="row"><label for="q">JPEG quality</label><span class="mono" id="qv">92</span></div><input id="q" type="range" min="60" max="100" value="92"></div>
+<p class="mono" id="meta">Full-resolution export at original dimensions.</p>
+</aside></div>
+<input type="file" id="file" accept="image/*" hidden>
+<script src="presets/more.js"></script>
+<script>
+const $=s=>document.querySelector(s),clamp=(v,a=0,b=1)=>v<a?a:v>b?b:v,ss=(a,b,x)=>{x=clamp((x-a)/(b-a));return x*x*(3-2*x)};
+/* ---------- PRESETS (units = Lightroom-style numbers; the engine maps them, see MAP in prep/gradeRows) ---------- */
+const D=(id,name,cat,desc,a,hsl,split,g,fx,x)=>({id,name,cat,desc,a:Object.assign({ex:0,co:0,hi:0,sh:0,wh:0,bl:0,te:0,ti:0,vi:0,sa:0,cl:0,dh:0},a),hsl:hsl||{},split,g,fx:fx||{},...x});
+const PRESETS=[
+D('portra','Portra','Colour Film','Soft highlights, gentle warmth, restrained colour.',{ex:.08,co:-12,hi:-38,sh:30,wh:-10,bl:14,te:9,ti:3,vi:8,sa:-10},{r:[0,-6,4],o:[-3,-6,16],y:[0,-18,0],g:[0,-38,-6],a:[0,-20,0],b:[0,-22,6]},{s:[30,6],h:[40,8],bal:0},[16,22,28],0,{curves:{m:[[0,6],[64,66],[128,128],[192,192],[255,250]]}}),
+D('gold','Gold','Colour Film','A bright afternoon: golden yellows, richer reds.',{ex:.12,co:16,hi:-15,sh:10,wh:8,bl:8,te:32,ti:7,vi:26,sa:8},{r:[2,14,0],o:[4,16,2],y:[-14,30,8],g:[-18,-28,0],a:[0,-20,0],b:[0,-25,-12]},{s:[30,10],h:[48,18],bal:0},[34,36,48]),
+D('cinema','Cinema','Cinematic','Cool shadows, warm highlights, controlled colour.',{ex:-.05,co:30,hi:-38,sh:14,wh:-14,bl:-20,te:0,ti:-3,vi:10,sa:-12},{r:[-4,0,0],o:[0,16,4],y:[0,-30,0],g:[-10,-40,-10],a:[-6,14,-6],b:[0,-8,-14]},{s:[200,30],h:[34,24],bal:6},[24,32,38]),
+D('silver','Silver','Monochrome','Deep blacks, detailed midtones, true luminance mix.',{ex:.04,co:16,hi:-22,sh:12,wh:8,bl:-12},null,null,[22,26,34],0,{mono:[.30,.59,.11]}),
+D('ultramax','Ultramax','Colour Film','Punchy, saturated colour with rich blues.',{co:26,hi:-18,sh:6,wh:12,bl:-18,te:6,ti:2,vi:40,sa:26},{r:[0,26,-4],o:[0,16,0],y:[0,20,0],g:[8,26,-4],a:[0,20,0],b:[0,40,-8],p:[0,20,0],m:[0,22,0]},{s:[220,6],h:[40,8],bal:0},[42,40,60]),
+D('superia','Superia','Colour Film','Cooler balance, cyan-leaning greens.',{co:10,hi:-28,sh:24,wh:-8,bl:12,te:-14,ti:-18,vi:16,sa:-4},{r:[0,-14,0],o:[0,-16,0],y:[-8,-6,0],g:[-26,14,6],a:[0,28,2],b:[0,12,0],m:[0,-10,0]},{s:[185,14],h:[165,8],bal:0},[34,30,42]),
+D('noir','Noir','Monochrome','Dramatic, high-contrast black and white.',{ex:-.15,co:58,hi:-14,sh:-28,wh:10,bl:-48},null,null,[56,44,66],0,{mono:[.58,.38,.04]}),
+D('instant','Instant','Vintage','Soft contrast, paper-warm highlights, faded shadows.',{ex:.1,co:-24,hi:-34,sh:34,wh:-18,bl:38,te:10,ti:9,vi:-8,sa:-20},{g:[0,-30,0],b:[0,-20,0]},{s:[18,16],h:[48,20],bal:0},[26,44,44],{dust:1}),
+D('daydream','Daydream','Vintage','Airy, lifted, pastel and soft.',{ex:.35,co:-26,hi:-42,sh:40,wh:-12,bl:34,te:2,ti:6,vi:22,sa:-6},{r:[0,-10,10],o:[0,0,20],y:[0,-10,14],g:[0,-30,12],a:[0,14,22],b:[6,-20,28],p:[0,-8,18],m:[0,-6,12]},{s:[255,12],h:[40,16],bal:0},[12,24,28],{halation:1}),
+D('seventies','Seventies','Vintage','Amber highlights, earthy greens, muted blues.',{ex:-.05,co:8,hi:-22,sh:20,wh:-18,bl:26,te:30,ti:11,vi:-6,sa:-22},{r:[8,0,-6],o:[0,16,-4],y:[-16,10,-10],g:[-32,-42,-12],a:[0,-30,0],b:[0,-48,-10],m:[0,-20,0]},{s:[30,20],h:[40,28],bal:0},[50,44,56],{dust:1}),
+D('afterhours','After Hours','Cinematic','Night grade: teal shadows, warm lights, halation.',{ex:-.28,co:34,hi:-42,sh:6,wh:-14,bl:-30,te:-14,ti:-9,vi:10,sa:-12},{r:[0,10,0],o:[0,22,8],y:[0,-6,4],g:[0,-42,-8],a:[0,14,-4],b:[0,16,-18]},{s:[215,28],h:[28,22],bal:-4},[30,34,48],{halation:1}),
+D('fadedcinema','Faded Cinema','Cinematic','Lifted blacks, muted colour, warm shadows.',{ex:-.05,co:-10,hi:-42,sh:34,wh:-22,bl:42,te:3,ti:-4,vi:4,sa:-32},{r:[0,-10,0],o:[0,-22,0],y:[0,-6,0],g:[0,-55,0],a:[0,10,0],b:[0,-28,-4]},{s:[38,22],h:[196,14],bal:8},[34,36,46]),
+D('film35','Film 35mm','My Presets','Lifted blacks, warm shadows, cyan highlights, muted greens.',
+ {ex:-.06,co:15,hi:-37,sh:60,wh:-30,bl:55,te:3,ti:-10,vi:26,sa:-18,cl:5,dh:8},
+ {r:[-5,-8,-28],o:[2,-32,-8],y:[5,18,-18],g:[-34,-62,34],a:[33,24,60],b:[-15,-1,32],p:[0,-33,-25],m:[-17,-27,-24]},
+ {s:[48,17],h:[184,5],bal:10},[44,34,46],0,{calib:[[47,-10],[72,-15],[-20,-10]],note:'Browser approximation of the supplied Lightroom values (texture +15 and noise reduction are not modelled). Not an exact Lightroom rendering.',
+ curves:{m:[[0,39],[57,73],[125,127],[189,187],[255,249]],r:[[0,0],[39,9],[89,60],[127,120],[197,206],[255,255]],g:[[0,0],[39,11],[91,63],[130,121],[198,205],[255,255]],b:[[0,0],[40,13],[88,63],[128,120],[197,206],[255,255]]}})
+];
+const CATS=['All','Colour Film','Cinematic','Vintage','Monochrome','My Presets'];
+/* extra presets from presets/*.js (see presets/more.js) */
+(window.HALIDE_PRESETS||[]).forEach(p=>{if(!PRESETS.some(q=>q.id==p.id))PRESETS.push(D(p.id,p.name,p.cat,p.desc,p.a,p.hsl,p.split||null,p.g,p.fx,{mono:p.mono,curves:p.curves,calib:p.calib,note:p.note}))});
+/* ---------- ENGINE ---------- */
+function curveLUT(p){const n=p.length,x=p.map(a=>a[0]),y=p.map(a=>a[1]),d=[],m=[];
+ for(let i=0;i<n-1;i++)d[i]=(y[i+1]-y[i])/(x[i+1]-x[i]);m[0]=d[0];m[n-1]=d[n-2];
+ for(let i=1;i<n-1;i++)m[i]=d[i-1]*d[i]<=0?0:(d[i-1]+d[i])/2;
+ for(let i=0;i<n-1;i++){if(!d[i]){m[i]=m[i+1]=0}else{const a=m[i]/d[i],b=m[i+1]/d[i],s=a*a+b*b;if(s>9){const t=3/Math.sqrt(s);m[i]=t*a*d[i];m[i+1]=t*b*d[i]}}}
+ const L=new Float32Array(1024);let k=0;
+ for(let i=0;i<1024;i++){const v=i/1023*255;while(k<n-2&&v>x[k+1])k++;const h=x[k+1]-x[k],t=(v-x[k])/h,t2=t*t,t3=t2*t;
+  L[i]=clamp((((2*t3-3*t2+1)*y[k]+(t3-2*t2+t)*h*m[k]+(-2*t3+3*t2)*y[k+1]+(t3-t2)*h*m[k+1])/255))}
+ return L}
+const T=[0,0,0];
+function r2h(r,g,b){const mx=Math.max(r,g,b),mn=Math.min(r,g,b),l=(mx+mn)/2,d=mx-mn;let h=0,s=0;if(d>1e-5){s=d/(1-Math.abs(2*l-1)+1e-6);h=mx==r?(g-b)/d+(g<b?6:0):mx==g?(b-r)/d+2:(r-g)/d+4;h*=60}T[0]=h;T[1]=s;T[2]=l}
+function h2r(h,s,l){h-=Math.floor(h);const q=l<.5?l*(1+s):l+s-l*s,p=2*l-q,f=t=>{t-=Math.floor(t);return t<1/6?p+(q-p)*6*t:t<.5?q:t<2/3?p+(q-p)*(2/3-t)*6:p};T[0]=f(h+1/3);T[1]=f(h);T[2]=f(h-1/3)}
+const BC=[0,30,60,120,180,240,270,320];
+function prep(P){const c=P.curves||{},mk=p=>p?curveLUT(p):null,M=mk(c.m),ch=[mk(c.r),mk(c.g),mk(c.b)];
+ const luts=ch.map(C=>{const t=new Float32Array(1024);for(let i=0;i<1024;i++){let v=i/1023;if(M)v=M[Math.round(v*1023)];if(C)v=C[Math.round(v*1023)];t[i]=v}return t});
+ const bH=[],bS=[],bL=[];for(const k of 'roygabpm'){const v=P.hsl[k]||[0,0,0];bH.push(v[0]);bS.push(v[1]);bL.push(v[2])}
+ const sp=P.split,sc=sp?[sp.s,sp.h].map(z=>{h2r(z[0]/360,1,.5);return[T[0]-.5,T[1]-.5,T[2]-.5]}):null;
+ let cal=null;if(P.calib){const col=[0,120,240].map((h0,i)=>{h2r((h0+P.calib[i][0]*.25)/360,clamp(1+P.calib[i][1]/100,0,1),.5);return[T[0],T[1],T[2]]});
+  cal=[];for(let r=0;r<3;r++){const w=col[0][r]+col[1][r]+col[2][r];for(let q=0;q<3;q++)cal.push(col[q][r]/w)}}
+ return{luts,bH,bS,bL,sc,cal}}
+/* Order: exposure → WB → (mono) → tonal → contrast/clarity/dehaze → curves → HSL+vibrance/sat → split toning → calibration */
+function gradeRows(s,o,E,P,w,y0,y1){const a=P.a,[L0,L1,L2]=E.luts,ex=Math.pow(2,a.ex),te=a.te*.0022,ti=a.ti*.0018,k=1+(a.co+a.dh*.5+a.cl*.3)*.0075,sat=1+a.sa/100,mono=P.mono;
+ for(let i=y0*w*4,e=y1*w*4;i<e;i+=4){let r=s[i]/255*ex,g=s[i+1]/255*ex,b=s[i+2]/255*ex;
+  r+=te+ti*.5;b+=-te+ti*.5;g-=ti;
+  if(mono){r=g=b=r*mono[0]+g*mono[1]+b*mono[2]}
+  const L=clamp(.2126*r+.7152*g+.0722*b),dl=a.sh*.0030*(1-L)*(1-L)+a.hi*.0030*L*L+a.wh*.0012*ss(.5,1,L)+a.bl*.0016*(1-ss(0,.5,L));
+  r=clamp((r+dl-.5)*k+.5);g=clamp((g+dl-.5)*k+.5);b=clamp((b+dl-.5)*k+.5);
+  r=L0[(r*1023+.5)|0];g=L1[(g*1023+.5)|0];b=L2[(b*1023+.5)|0];
+  if(!mono){r2h(r,g,b);let h=T[0],sa=T[1],l=T[2];
+   if(sa>1e-4){let j=7;for(let q=0;q<7;q++)if(h>=BC[q]&&h<BC[q+1]){j=q;break}
+    const j2=(j+1)&7,c2=j==7?360:BC[j2],t=ss(0,1,(h-BC[j])/(c2-BC[j])),wt=ss(0,.3,sa),
+    dH=E.bH[j]+(E.bH[j2]-E.bH[j])*t,dS=E.bS[j]+(E.bS[j2]-E.bS[j])*t,dL=E.bL[j]+(E.bL[j2]-E.bL[j])*t;
+    h+=dH*.3*wt;sa*=1+dS/100*wt;l=clamp(l+dL/100*.28*wt*(1-Math.abs(2*l-1)));
+    sa*=sat*(1+a.vi*.008*(1-sa));sa=clamp(sa)}
+   h2r(h/360,sa,l);r=T[0];g=T[1];b=T[2]}
+  if(E.sc){const bal=(P.split.bal||0)*.004,sw=1-ss(0,.7,L-bal),hw=ss(.3,1,L-bal),A=E.sc[0],B=E.sc[1],sa=P.split.s[1]/100*sw*1.2,sb=P.split.h[1]/100*hw*1.2;
+   r+=A[0]*sa+B[0]*sb;g+=A[1]*sa+B[1]*sb;b+=A[2]*sa+B[2]*sb}
+  if(E.cal){const c=E.cal,nr=c[0]*r+c[1]*g+c[2]*b,ng=c[3]*r+c[4]*g+c[5]*b,nb=c[6]*r+c[7]*g+c[8]*b;r=nr;g=ng;b=nb}
+  o[i]=clamp(r)*255+.5;o[i+1]=clamp(g)*255+.5;o[i+2]=clamp(b)*255+.5;o[i+3]=s[i+3]}}
+function hsh(x,y,s){let h=Math.imul(x,374761393)+Math.imul(y,668265263)+Math.imul(s,-2048144777)|0;h=Math.imul(h^(h>>>13),1274126177);return((h^(h>>>16))>>>0)/4294967295}
+function vn(x,y,s){const xi=Math.floor(x),yi=Math.floor(y);let fx=x-xi,fy=y-yi;fx=fx*fx*(3-2*fx);fy=fy*fy*(3-2*fy);
+ const a=hsh(xi,yi,s),b=hsh(xi+1,yi,s),c=hsh(xi,yi+1,s),d=hsh(xi+1,yi+1,s);return a+(b-a)*fx+(c-a)*fy+(a-b-c+d)*fx*fy}
+function halation(d,w,h){const S=8,sw=Math.ceil(w/S),sh=Math.ceil(h/S);let m=new Float32Array(sw*sh),t=new Float32Array(sw*sh);
+ for(let y=0;y<sh;y++)for(let x=0;x<sw;x++){const i=(Math.min(h-1,y*S+4)*w+Math.min(w-1,x*S+4))*4;m[y*sw+x]=ss(.7,.98,(.2126*d[i]+.7152*d[i+1]+.0722*d[i+2])/255)}
+ const rad=Math.max(2,Math.round(sw/45));
+ for(let p=0;p<3;p++){for(let y=0;y<sh;y++)for(let x=0;x<sw;x++){let s=0;for(let q=-rad;q<=rad;q++)s+=m[y*sw+clamp(x+q,0,sw-1)|0];t[y*sw+x]=s/(2*rad+1)}
+  for(let y=0;y<sh;y++)for(let x=0;x<sw;x++){let s=0;for(let q=-rad;q<=rad;q++)s+=t[clamp(y+q,0,sh-1)*sw+x];m[y*sw+x]=s/(2*rad+1)}}
+ for(let y=0;y<h;y++){const fy=clamp(y/S-.5,0,sh-1.001),y0=fy|0,wy=fy-y0;for(let x=0;x<w;x++){const fx=clamp(x/S-.5,0,sw-1.001),x0=fx|0,wx=fx-x0,i0=y0*sw+x0,
+  v=(m[i0]*(1-wx)+m[i0+1]*wx)*(1-wy)+(m[i0+sw]*(1-wx)+m[i0+sw+1]*wx)*wy*1,i=(y*w+x)*4,g=v*.5*255;d[i]+=g;d[i+1]+=g*.42;d[i+2]+=g*.18}}}
+function stageB(g,w,h,P,o,seed){const f=new Uint8ClampedArray(g);if(o.ha)halation(f,w,h);
+ const LE=Math.max(w,h),amt=o.ga/100*.30,cell=(.7+P.g[1]*o.cs/50)*(LE/1600),ro=clamp(P.g[2]/100*o.cr);
+ if(amt>0)for(let y=0;y<h;y++)for(let x=0;x<w;x++){const i=(y*w+x)*4,L=(.2126*f[i]+.7152*f[i+1]+.0722*f[i+2])/255,
+  n=((vn(x/cell,y/cell,seed)+ro*vn(x*2/cell,y*2/cell,seed+7))/(1+ro)-.5)*2.4,v=n*amt*(1-.7*Math.pow(2*L-1,2))*255;f[i]+=v;f[i+1]+=v;f[i+2]+=v}
+ if(o.du){let s=seed>>>0;const rnd=()=>{s=s+0x6D2B79F5|0;let t=Math.imul(s^s>>>15,1|s);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296},sc=LE/1600;
+  for(let n=0;n<16;n++){const cx=rnd()*w,cy=rnd()*h,r=(.6+rnd()*1.4)*sc,al=.2+rnd()*.25,dk=rnd()<.35;
+   for(let y=Math.max(0,cy-r-1|0);y<Math.min(h,cy+r+2);y++)for(let x=Math.max(0,cx-r-1|0);x<Math.min(w,cx+r+2);x++){const q=1-Math.hypot(x-cx,y-cy)/(r+.7);if(q>0){const i=(y*w+x)*4,v=dk?-q*al*200:q*al*220;f[i]+=v;f[i+1]+=v;f[i+2]+=v}}}}
+ return f}
+function mix(o,f,k,out){for(let i=0;i<o.length;i+=4){out[i]=o[i]+k*(f[i]-o[i]);out[i+1]=o[i+1]+k*(f[i+1]-o[i+1]);out[i+2]=o[i+2]+k*(f[i+2]-o[i+2]);out[i+3]=o[i+3]}}
+/* ---------- APP ---------- */
+const S={id:'portra',k:100,ga:18,cs:1,du:false,ha:false},cache={},hist=[],redoS=[];let bmp,src,pw,ph,outImg,seed=1,cmp=false,hold=false,pos=.5,fileName='';
+const cur=()=>PRESETS.find(p=>p.id==S.id),cv=$('#cv'),og=$('#og'),cx=cv.getContext('2d'),ox=og.getContext('2d'),preps={};
+const getE=P=>preps[P.id]||(preps[P.id]=prep(P));
+const msg=(t,e)=>{const m=$('#msg');m.textContent=t;m.className='mono'+(e?' err':'')};
+function render(){if(!src)return;const P=cur();
+ if(cache.a!==P.id){cache.g=new Uint8ClampedArray(src.data.length);gradeRows(src.data,cache.g,getE(P),P,pw,0,ph);cache.a=P.id;cache.b=null}
+ const kb=[S.ga,S.cs,S.du,S.ha,P.id].join();
+ if(cache.b!==kb){cache.f=stageB(cache.g,pw,ph,P,opts(P),seed);cache.b=kb}
+ mix(src.data,cache.f,S.k/100,outImg.data);cx.putImageData(outImg,0,0);msg('')}
+const opts=P=>({ga:S.ga,cs:S.cs,cr:S.cs<1?.7:S.cs>1?1.25:1,du:S.du,ha:S.ha});
+let pend=0;const sched=()=>{if(pend)return;pend=1;requestAnimationFrame(()=>{pend=0;render()})};
+function sync(){const P=cur();$('#pname').textContent=P.name;$('#pcat').textContent=P.cat.toUpperCase()+' · '+String(PRESETS.indexOf(P)+1).padStart(2,'0')+' · GRAIN '+S.ga;$('#pdesc').textContent=P.desc;
+ $('#k').value=S.k;$('#kv').textContent=S.k+'%';$('#ga').value=S.ga;$('#gav').textContent=S.ga;$('#du').checked=S.du;$('#ha').checked=S.ha;$('#note').textContent=P.note||'';
+ document.querySelectorAll('#gc button').forEach(b=>b.setAttribute('aria-pressed',+b.dataset.v==S.cs));
+ document.querySelectorAll('.pc').forEach(b=>b.setAttribute('aria-pressed',b.dataset.id==S.id));
+ $('#undo').disabled=hist.length<2;$('#redo').disabled=!redoS.length}
+const snap=()=>JSON.stringify(S);
+function commit(){const s=snap();if(hist[hist.length-1]!==s){hist.push(s);redoS.length=0}sync()}
+function restore(s){Object.assign(S,JSON.parse(s));sync();sched()}
+$('#undo').onclick=()=>{if(hist.length>1){redoS.push(hist.pop());restore(hist[hist.length-1])}};
+$('#redo').onclick=()=>{if(redoS.length){const s=redoS.pop();hist.push(s);restore(s)}};
+function setPreset(id){S.id=id;const P=cur();S.ga=P.g[0];S.du=!!P.fx.dust;S.ha=!!P.fx.halation;commit();sched()}
+/* strip */
+let cat='All';const tabs=$('#tabs'),strip=$('#strip');
+CATS.forEach(c=>{const b=document.createElement('button');b.className='tab';b.role='tab';b.textContent=c;b.onclick=()=>{cat=c;buildStrip()};tabs.append(b)});
+function buildStrip(){tabs.querySelectorAll('.tab').forEach(b=>b.setAttribute('aria-selected',b.textContent==cat));strip.innerHTML='';
+ PRESETS.forEach((P,i)=>{if(cat!='All'&&P.cat!=cat)return;const b=document.createElement('button');b.className='pc';b.dataset.id=P.id;b.setAttribute('aria-label',P.name+', '+P.cat);
+  b.innerHTML='<canvas width="112" height="75"></canvas><div class="fn"><span>'+P.name+'</span><span class="mono">'+String(i+1).padStart(2,'0')+'</span></div>';b.onclick=()=>setPreset(P.id);strip.append(b)});
+ drawThumbs();sync();requestAnimationFrame(()=>typeof arr=='function'&&arr())}
+let thumb;function drawThumbs(){if(!thumb)return;document.querySelectorAll('.pc').forEach(b=>{const P=PRESETS.find(p=>p.id==b.dataset.id),o=new Uint8ClampedArray(thumb.data.length);
+ gradeRows(thumb.data,o,getE(P),P,112,0,75);b.querySelector('canvas').getContext('2d').putImageData(new ImageData(o,112,75),0,0)})}
+/* load */
+const pick=()=>$('#file').click();$('#load').onclick=$('#load2').onclick=pick;
+$('#file').onchange=e=>e.target.files[0]&&load(e.target.files[0]);
+const st=$('#stage');st.ondragover=e=>{e.preventDefault();st.classList.add('drag')};st.ondragleave=()=>st.classList.remove('drag');
+st.ondrop=e=>{e.preventDefault();st.classList.remove('drag');e.dataTransfer.files[0]&&load(e.dataTransfer.files[0])};
+async function load(f){try{if(!/^image\//.test(f.type))throw Error('Unsupported file. Please choose a JPEG, PNG or WebP image.');
+ msg('Preparing negative…');let b;try{b=await createImageBitmap(f)}catch(e){throw Error('This image could not be decoded by your browser.')}
+ const sc=Math.min(1,1600/Math.max(b.width,b.height));pw=Math.round(b.width*sc);ph=Math.round(b.height*sc);
+ const c=document.createElement('canvas');c.width=pw;c.height=ph;const x=c.getContext('2d',{willReadFrequently:true});x.imageSmoothingQuality='high';x.drawImage(b,0,0,pw,ph);
+ bmp=b;src=x.getImageData(0,0,pw,ph);outImg=new ImageData(pw,ph);cv.width=og.width=pw;cv.height=og.height=ph;ox.putImageData(src,0,0);
+ const t=document.createElement('canvas');t.width=112;t.height=75;const tx=t.getContext('2d',{willReadFrequently:true}),z=Math.max(112/b.width,75/b.height);tx.drawImage(b,(112-b.width*z)/2,(75-b.height*z)/2,b.width*z,b.height*z);thumb=tx.getImageData(0,0,112,75);
+ fileName=f.name.replace(/\.[^.]+$/,'');seed=[...f.name].reduce((a,ch)=>a*31+ch.charCodeAt(0)|0,f.size|0);cache.a=null;
+ $('#fname').textContent=f.name+' · '+b.width+'×'+b.height;$('#empty').hidden=true;$('#frame').hidden=$('#tools').hidden=false;$('#exp').disabled=false;
+ msg('Developing preview…');fit();if(!hist.length){commit();setPreset(S.id)}drawThumbs();sched();cmpApply()}catch(e){msg(e.message,1)}}
+function fit(){if(!src)return;const r=st.getBoundingClientRect(),mw=r.width-24,mh=r.height-24,ar=pw/ph;let w=mw,h=w/ar;if(h>mh){h=mh;w=h*ar}const f=$('#frame');f.style.width=w+'px';f.style.height=h+'px'}
+new ResizeObserver(fit).observe(st);
+/* compare */
+function cmpApply(){const on=hold||cmp;og.hidden=!on;$('#dv').hidden=hold||!cmp;og.style.clipPath=hold?'none':'inset(0 '+(1-pos)*100+'% 0 0)';$('#dv').style.left=pos*100+'%'}
+$('#cmp').onclick=e=>{cmp=!cmp;e.currentTarget.setAttribute('aria-pressed',cmp);cmpApply()};
+const hb=$('#hold'),hs=v=>()=>{hold=v;cmpApply()};['pointerdown'].forEach(n=>hb.addEventListener(n,hs(1)));['pointerup','pointerleave','pointercancel'].forEach(n=>hb.addEventListener(n,hs(0)));
+addEventListener('keydown',e=>{if(e.key=='o'&&!e.repeat&&src){hold=true;cmpApply()}if((e.ctrlKey||e.metaKey)&&e.key=='z'){e.preventDefault();(e.shiftKey?$('#redo'):$('#undo')).click()}});addEventListener('keyup',e=>{if(e.key=='o'){hold=false;cmpApply()}});
+const fr=$('#frame'),mv=e=>{const r=fr.getBoundingClientRect();pos=clamp((e.clientX-r.left)/r.width);cmpApply()};
+fr.onpointerdown=e=>{if(cmp){fr.setPointerCapture(e.pointerId);mv(e);fr.onpointermove=mv}};fr.onpointerup=()=>fr.onpointermove=null;
+/* controls */
+$('#k').oninput=e=>{S.k=+e.target.value;$('#kv').textContent=S.k+'%';sched()};$('#k').onchange=commit;
+$('#ga').oninput=e=>{S.ga=+e.target.value;$('#gav').textContent=S.ga;sched()};$('#ga').onchange=commit;
+document.querySelectorAll('#gc button').forEach(b=>b.onclick=()=>{S.cs=+b.dataset.v;commit();sched()});
+$('#du').onchange=e=>{S.du=e.target.checked;commit();sched()};$('#ha').onchange=e=>{S.ha=e.target.checked;commit();sched()};
+$('#fmt').onchange=e=>$('#qw').hidden=e.target.value=='png';$('#q').oninput=e=>$('#qv').textContent=e.target.value;
+/* full-resolution export (same pipeline, original dimensions, chunked so the UI stays alive) */
+$('#exp').onclick=async()=>{if(!bmp)return;const btn=$('#exp');btn.disabled=true;
+ try{msg('Preparing export…');await new Promise(r=>setTimeout(r));const w=bmp.width,h=bmp.height,c=document.createElement('canvas');c.width=w;c.height=h;const x=c.getContext('2d',{willReadFrequently:true});x.drawImage(bmp,0,0);
+  const s=x.getImageData(0,0,w,h),P=cur(),E=getE(P),g=new Uint8ClampedArray(s.data.length),step=Math.max(16,Math.floor(1.5e6/w));
+  for(let y=0;y<h;y+=step){gradeRows(s.data,g,E,P,w,y,Math.min(h,y+step));msg('Applying colour profile… '+Math.round(y/h*100)+'%');await new Promise(r=>setTimeout(r))}
+  msg('Developing grain & effects…');await new Promise(r=>setTimeout(r));const f=stageB(g,w,h,P,opts(P),seed);mix(s.data,f,S.k/100,f);
+  x.putImageData(new ImageData(f,w,h),0,0);const type='image/'+$('#fmt').value,blob=await new Promise(r=>c.toBlob(r,type,$('#q').value/100));
+  if(!blob)throw Error('The browser returned no data.');const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=fileName+'-halide-'+P.id+(type=='image/png'?'.png':'.jpg');a.click();setTimeout(()=>URL.revokeObjectURL(a.href),4000);
+  msg('Exported '+w+'×'+h+' px.')}catch(e){msg('Export failed — this photograph may be too large for the browser’s memory. No reduced-size file was produced. ('+e.message+')',1)}
+ btn.disabled=false};
+const sl=$('#sl'),sr=$('#sr'),sv=d=>strip.scrollBy({left:d*strip.clientWidth*.8,behavior:matchMedia('(prefers-reduced-motion:reduce)').matches?'auto':'smooth'});
+sl.onclick=()=>sv(-1);sr.onclick=()=>sv(1);
+function arr(){sl.disabled=strip.scrollLeft<4;sr.disabled=strip.scrollLeft+strip.clientWidth>=strip.scrollWidth-4}
+strip.addEventListener('scroll',arr);new ResizeObserver(arr).observe(strip);
+buildStrip();sync();arr();
+</script></body></html>
